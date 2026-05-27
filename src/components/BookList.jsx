@@ -28,7 +28,7 @@ function BookList({ books, pagination, onBookClick, onUpdate }) {
 
     return `${title}${edition ? ` ${edition}` : ""}${
       subtitle ? `  ―${subtitle}` : ""
-    }${classification_code ? ` (${label_name} ${classification_code})` : ""}`;
+    }${label_name ? ` (${label_name}${classification_code ? ` ${classification_code}` : ""})` : ""}`;
   };
 
   return (

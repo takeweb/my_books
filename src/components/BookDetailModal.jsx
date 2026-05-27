@@ -170,7 +170,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
 
     return `${title}${edition ? ` ${edition}` : ""}${
       subtitle ? `  ―${subtitle}` : ""
-    }${classification_code ? ` (${label_name} ${classification_code})` : ""}`;
+    }${label_name ? ` (${label_name}${classification_code ? ` ${classification_code}` : ""})` : ""}`;
   };
 
   // console.log("BookDetailModalに渡されたbookオブジェクト:", book); // 追加: bookオブジェクトのデバッグログ
