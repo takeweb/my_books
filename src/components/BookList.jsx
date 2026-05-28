@@ -79,6 +79,7 @@ function BookList({ books, pagination, onBookClick, onUpdate }) {
               <div>ISBN-10: {book.isbn_10 || "-"}</div>
               <div>ISBN-13: {book.isbn || "-"}</div>
               <div>判型: {book.format_name || "-"}</div>
+              <div>ステータス: {book.status_name || "-"}</div>
               <div>頁数: {book.pages ? `${book.pages}ページ` : "-"}</div>
               <div>発売日: {book.release_date || "-"}</div>
               {book.purchase_date && <div>購入日: {book.purchase_date}</div>}
