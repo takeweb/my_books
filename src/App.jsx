@@ -216,6 +216,7 @@ function App() {
             <>
               <BookList
                 books={books}
+                tags={tags}
                 pagination={
                   <Pagination
                     currentPage={currentPage}
@@ -224,6 +225,10 @@ function App() {
                   />
                 }
                 onBookClick={(book) => setSelectedBook(book)}
+                onTagClick={(tagId) => {
+                  setSelectedTag(String(tagId));
+                  handleSetCurrentPage(1);
+                }}
               />
               <BookDetailModal
                 book={selectedBook}
