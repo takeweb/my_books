@@ -80,12 +80,12 @@ function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpd
               <div>ISBN-10: {book.isbn_10 || "-"}</div>
               <div>ISBN-13: {book.isbn || "-"}</div>
               <div>判型: {book.format_name || "-"}</div>
-              <div>ステータス: {book.status_name || "-"}</div>
               <div>頁数: {book.pages ? `${book.pages}ページ` : "-"}</div>
               <div>発売日: {book.release_date || "-"}</div>
               {book.purchase_date && <div>購入日: {book.purchase_date}</div>}
               {book.read_start_date && <div>読始日: {book.read_start_date}</div>}
               {book.read_end_date && <div>読了日: {book.read_end_date}</div>}
+              <div>ステータス: {book.status_name || "-"}</div>
               {/* タグを表示 */}
               {book.tags && (
                 <div className="mt-3">
