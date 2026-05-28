@@ -2,7 +2,8 @@ import { getBookCoverUrl } from "../libs/bookUtil";
 import { supabase } from "../libs/supabaseClient";
 import { useEffect } from "react";
 
-function BookList({ books, pagination, onBookClick, onUpdate }) {
+function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpdate }) {
+  const tagIdByName = new Map(tags.map((t) => [t.tag_name, t.id]));
   useEffect(() => {
     if (onUpdate) {
       onUpdate();
@@ -93,14 +94,45 @@ function BookList({ books, pagination, onBookClick, onUpdate }) {
                     {book.tags
                       .split(", ")
                       .filter((tag) => tag.trim() !== "") // 空文字を除外
-                      .map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full border border-blue-200"
-                        >
-                          {tag.trim()}
-                        </span>
-                      ))}
+                      .map((tag, index) => {
+                        const name = tag.trim();
+                        const tagId = tagIdByName.get(name);
+                        const clickable = onTagClick && tagId != null;
+                        return (
+                          <span
+                            key={index}
+                            role={clickable ? "button" : undefined}
+                            tabIndex={clickable ? 0 : undefined}
+                            onClick={
+                              clickable
+                                ? (e) => {
+                                    e.stopPropagation();
+                                    onTagClick(tagId);
+                                  }
+                                : undefined
+                            }
+                            onKeyDown={
+                              clickable
+                                ? (e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      onTagClick(tagId);
+                                    }
+                                  }
+                                : undefined
+                            }
+                            className={
+                              "inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full border border-blue-200" +
+                              (clickable
+                                ? " cursor-pointer hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                : "")
+                            }
+                          >
+                            {name}
+                          </span>
+                        );
+                      })}
                   </div>
                 </div>
               )}
