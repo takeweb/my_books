@@ -31,7 +31,8 @@ RETURNS TABLE (
     read_end_date date,
     tags character varying,
     label_name text,
-    classification_code text
+    classification_code text,
+    status_name text
 )
 LANGUAGE plpgsql
 SET search_path TO public
@@ -82,12 +83,14 @@ BEGIN
             ub.read_end_date,
             COALESCE(tg.tags, '') AS tags,
             l.label_name,
-            b.classification_code
+            b.classification_code,
+            st.status_name
         FROM books b
             JOIN publishers p ON p.id = b.publisher_id
             JOIN user_books ub ON ub.book_id = b.id
             JOIN formats f ON f.id = b.format_id
             LEFT JOIN labels l ON l.id = b.label_id
+            LEFT JOIN statuses st ON st.id = ub.status_id
             LEFT JOIN role_agg a ON a.book_id = b.id AND a.role_id = 1
             LEFT JOIN role_agg s ON s.book_id = b.id AND s.role_id = 2
             LEFT JOIN role_agg t ON t.book_id = b.id AND t.role_id = 4
