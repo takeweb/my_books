@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from "react";
 function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const listRef = useRef(null);
+  const scrollPos = useRef(0);
 
   const rootTags = tags
     .filter((t) => !t.parent_id)
@@ -35,13 +37,19 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const select = (value) => {
     setSelectedTag(value);
     setCurrentPage(1);
+    if (listRef.current) scrollPos.current = listRef.current.scrollTop;
     setOpen(false);
   };
 
   useEffect(() => {
     if (!open) return;
+    // スクロール位置を復元
+    if (listRef.current) listRef.current.scrollTop = scrollPos.current;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) {
+        if (listRef.current) scrollPos.current = listRef.current.scrollTop;
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -53,7 +61,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
       <div className="relative">
         <button
           type="button"
-          className="px-4 py-2 border border-gray-300 rounded bg-white text-gray-800 shadow-sm min-w-40 text-left flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-4 py-2 border border-gray-300 rounded bg-white text-gray-800 shadow-sm w-72 text-left flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           onClick={() => setOpen((v) => !v)}
         >
           <span className="truncate">{selectedLabel}</span>
@@ -61,7 +69,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
         </button>
 
         {open && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg min-w-48 max-h-80 overflow-y-auto">
+          <div ref={listRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 overflow-y-auto">
             <MenuItem
               label="すべて"
               value=""
