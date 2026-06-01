@@ -34,7 +34,8 @@ export async function getJoinedBooksData(
   itemsPerPage,
   totalCountCallback,
   tagId = null,
-  statusId = null
+  statusId = null,
+  allTags = []
 ) {
   try {
     // ページネーションのためのデータ範囲を計算
@@ -53,7 +54,7 @@ export async function getJoinedBooksData(
     // 総件数取得はgetTotalCount関数を利用（userIdを渡す）
     let totalCount = 0;
     try {
-      totalCount = await getTotalCount(supabaseClient, userId, tagId, statusId);
+      totalCount = await getTotalCount(supabaseClient, userId, tagId, statusId, allTags);
       if (totalCountCallback) totalCountCallback(totalCount);
     } catch (countError) {
       if (totalCountCallback) totalCountCallback(0);
@@ -62,7 +63,9 @@ export async function getJoinedBooksData(
 
     // RPCで書籍データ取得
     const rpcParams = { p_offset: offset, p_limit: limit };
-    if (tagId && tagId !== "") rpcParams.p_tag = tagId;
+    if (tagId && tagId !== "") {
+      rpcParams.p_tag_ids = getDescendantTagIds(allTags, tagId).map(Number);
+    }
     if (statusId && statusId !== "") rpcParams.p_status = statusId;
     const { data: books, error: rpcError } = await supabaseClient.rpc(
       "get_books_with_aggregated_authors",
@@ -89,7 +92,7 @@ export async function getJoinedBooksData(
  * @param {number} statusId - 選択されたステータスのID（省略可）
  * @returns 件数
  */
-export async function getTotalCount(supabaseClient, userId, tagId = null, statusId = null) {
+export async function getTotalCount(supabaseClient, userId, tagId = null, statusId = null, allTags = []) {
   let query = supabaseClient
     .from("user_books")
     .select("book_id", { count: "exact", head: true })
@@ -100,10 +103,11 @@ export async function getTotalCount(supabaseClient, userId, tagId = null, status
   }
 
   if (tagId) {
+    const tagIds = getDescendantTagIds(allTags, tagId);
     const { data: tagBooks } = await supabaseClient
       .from("book_tags")
       .select("book_id")
-      .eq("tag_id", tagId)
+      .in("tag_id", tagIds)
       .eq("user_id", userId);
     query = query.in("book_id", tagBooks?.map((row) => row.book_id) || []);
   }
@@ -132,19 +136,35 @@ export async function getStatusSelectData(supabaseClient) {
 /**
  * タグのリストを取得する関数
  * @param {object} supabaseClient - Supabaseクライアントインスタンス
- * @returns tagのリスト
- * @returns {Promise<Array>} タグのリスト
+ * @returns {Promise<Array>} タグのリスト（id, tag_name, genre_id, parent_id を含む）
  */
 export async function getTagSelectData(supabaseClient) {
   const { data, error } = await supabaseClient
     .from("tags")
-    .select("id, tag_name")
+    .select("id, tag_name, genre_id, parent_id")
     .order("tag_name");
   if (error) {
     console.error("タグ取得エラー:", error);
     return;
   }
   return data || [];
+}
+
+/**
+ * 指定したタグとその全子孫タグのIDを返す
+ * @param {Array} allTags - getTagSelectData で取得した全タグ配列
+ * @param {number|string} tagId - 起点となるタグID
+ * @returns {number[]} 起点タグID + 全子孫タグIDの配列
+ */
+export function getDescendantTagIds(allTags, tagId) {
+  const id = Number(tagId);
+  const result = [id];
+  for (const tag of allTags) {
+    if (Number(tag.parent_id) === id) {
+      result.push(...getDescendantTagIds(allTags, tag.id));
+    }
+  }
+  return result;
 }
 
 /**

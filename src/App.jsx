@@ -87,11 +87,12 @@ function App() {
       5,
       (count) => setTotalPages(Math.max(1, Math.ceil(count / 5))),
       selectedTag === "" ? null : selectedTag,
-      selectedStatus === "" ? null : selectedStatus
+      selectedStatus === "" ? null : selectedStatus,
+      tags
     ).then((books) => {
       if (books) setBooks(books);
     });
-  }, [user, selectedTag, selectedStatus, currentPage]);
+  }, [user, selectedTag, selectedStatus, currentPage, tags]);
 
   // ログイン
   const handleLogin = async (e) => {
@@ -240,7 +241,8 @@ function App() {
                     5,
                     (count) => setTotalPages(Math.max(1, Math.ceil(count / 5))),
                     selectedTag === "" ? null : selectedTag,
-                    selectedStatus === "" ? null : selectedStatus
+                    selectedStatus === "" ? null : selectedStatus,
+                    tags
                   ).then((books) => {
                     if (books) setBooks(books);
                   });

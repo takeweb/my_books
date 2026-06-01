@@ -1,14 +1,19 @@
 function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
-  // tags を genre_id, tag_name 順でソート
-  const sortedTags = [...tags].sort((a, b) => {
-    const genreA = Number(a.genre_id);
-    const genreB = Number(b.genre_id);
+  const rootTags = tags
+    .filter((t) => !t.parent_id)
+    .sort((a, b) => {
+      const genreA = Number(a.genre_id) || 0;
+      const genreB = Number(b.genre_id) || 0;
+      if (genreA !== genreB) return genreA - genreB;
+      return a.tag_name.localeCompare(b.tag_name, "ja");
+    });
 
-    if (genreA !== genreB) {
-      return genreA - genreB;
+  const childrenByParent = tags.reduce((acc, t) => {
+    if (t.parent_id) {
+      (acc[t.parent_id] = acc[t.parent_id] || []).push(t);
     }
-    return a.tag_name.localeCompare(b.tag_name);
-  });
+    return acc;
+  }, {});
 
   return (
     <div className="w-full max-w-sm mx-auto mb-4 flex flex-row items-center justify-center gap-2">
@@ -28,11 +33,30 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
         }}
       >
         <option value="">すべて</option>
-        {sortedTags.map((tag) => (
-          <option key={tag.id} value={tag.id}>
-            {tag.tag_name}
-          </option>
-        ))}
+        {rootTags.map((tag) => {
+          const children = (childrenByParent[tag.id] || []).sort((a, b) =>
+            a.tag_name.localeCompare(b.tag_name, "ja")
+          );
+
+          if (children.length > 0) {
+            return (
+              <optgroup key={tag.id} label={tag.tag_name}>
+                <option value={tag.id}>（全て）</option>
+                {children.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.tag_name}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          }
+
+          return (
+            <option key={tag.id} value={tag.id}>
+              {tag.tag_name}
+            </option>
+          );
+        })}
       </select>
     </div>
   );

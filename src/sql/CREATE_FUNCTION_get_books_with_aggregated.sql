@@ -1,10 +1,11 @@
 DROP FUNCTION IF EXISTS get_books_with_aggregated_authors(int, int, bigint);
 DROP FUNCTION IF EXISTS get_books_with_aggregated_authors(int, int, bigint, bigint);
+DROP FUNCTION IF EXISTS get_books_with_aggregated_authors(int, int, bigint[], bigint);
 
 CREATE OR REPLACE FUNCTION get_books_with_aggregated_authors(
     p_offset int,
     p_limit int,
-    p_tag bigint DEFAULT NULL,
+    p_tag_ids bigint[] DEFAULT NULL,
     p_status bigint DEFAULT NULL
 )
 RETURNS TABLE (
@@ -99,8 +100,8 @@ BEGIN
             LEFT JOIN role_agg i ON i.book_id = b.id AND i.role_id = 7
             LEFT JOIN tags_agg tg ON tg.book_id = b.id
         WHERE
-            (p_tag IS NULL OR EXISTS (
-                SELECT 1 FROM book_tags bt WHERE bt.book_id = b.id AND bt.tag_id = p_tag AND bt.user_id = auth.uid()
+            (p_tag_ids IS NULL OR EXISTS (
+                SELECT 1 FROM book_tags bt WHERE bt.book_id = b.id AND bt.tag_id = ANY(p_tag_ids) AND bt.user_id = auth.uid()
             ))
             AND (p_status IS NULL OR ub.status_id = p_status)
         ORDER BY
