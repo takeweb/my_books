@@ -6,32 +6,39 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const listRef = useRef(null);
   const scrollPos = useRef(0);
 
-  const rootTags = tags
-    .filter((t) => !t.parent_id)
-    .sort((a, b) => {
-      const genreA = Number(a.genre_id) || 0;
-      const genreB = Number(b.genre_id) || 0;
-      if (genreA !== genreB) return genreA - genreB;
-      return a.tag_name.localeCompare(b.tag_name, "ja");
-    });
+  const tagById = new Map(tags.map((t) => [Number(t.id), t]));
 
   const childrenByParent = tags.reduce((acc, t) => {
-    if (t.parent_id) {
-      (acc[t.parent_id] = acc[t.parent_id] || []).push(t);
-    }
+    const pid = t.parent_id == null ? 0 : Number(t.parent_id);
+    (acc[pid] = acc[pid] || []).push(t);
     return acc;
   }, {});
 
+  const sortRoot = (a, b) => {
+    const ga = Number(a.genre_id) || 0;
+    const gb = Number(b.genre_id) || 0;
+    if (ga !== gb) return ga - gb;
+    return a.tag_name.localeCompare(b.tag_name, "ja");
+  };
+  const sortChild = (a, b) => a.tag_name.localeCompare(b.tag_name, "ja");
+
+  const rootTags = (childrenByParent[0] || []).slice().sort(sortRoot);
+
   const selectedLabel = (() => {
     if (!selectedTag) return "すべて";
-    const tag = tags.find((t) => String(t.id) === String(selectedTag));
+    const tag = tagById.get(Number(selectedTag));
     if (!tag) return "すべて";
-    if (tag.parent_id) {
-      const parent = tags.find((t) => t.id === tag.parent_id);
-      return parent ? `${parent.tag_name} › ${tag.tag_name}` : tag.tag_name;
+    const path = [];
+    const visited = new Set();
+    let cur = tag;
+    while (cur && !visited.has(Number(cur.id))) {
+      visited.add(Number(cur.id));
+      path.unshift(cur.tag_name);
+      cur = cur.parent_id ? tagById.get(Number(cur.parent_id)) : null;
     }
-    const hasChildren = tags.some((t) => Number(t.parent_id) === Number(tag.id));
-    return hasChildren ? `${tag.tag_name}（全て）` : tag.tag_name;
+    const hasChildren = (childrenByParent[Number(tag.id)] || []).length > 0;
+    const label = path.join(" › ");
+    return hasChildren ? `${label}（全て）` : label;
   })();
 
   const select = (value) => {
@@ -43,7 +50,6 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   useEffect(() => {
     if (!open) return;
-    // スクロール位置を復元
     if (listRef.current) listRef.current.scrollTop = scrollPos.current;
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -54,6 +60,53 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  const renderNode = (tag, depth, visited) => {
+    const id = Number(tag.id);
+    if (visited.has(id)) return null;
+    const nextVisited = new Set(visited);
+    nextVisited.add(id);
+
+    const children = (childrenByParent[id] || []).slice().sort(sortChild);
+    const hasChildren = children.length > 0;
+
+    if (hasChildren) {
+      return (
+        <div key={id}>
+          {depth === 0 ? (
+            <div className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide border-t border-gray-100 first:border-t-0">
+              {tag.tag_name}
+            </div>
+          ) : (
+            <MenuItem
+              label={tag.tag_name}
+              selected={false}
+              onClick={null}
+              depth={depth}
+              asHeader
+            />
+          )}
+          <MenuItem
+            label="（全て）"
+            selected={String(selectedTag) === String(id)}
+            onClick={() => select(String(id))}
+            depth={depth + 1}
+          />
+          {children.map((child) => renderNode(child, depth + 1, nextVisited))}
+        </div>
+      );
+    }
+
+    return (
+      <MenuItem
+        key={id}
+        label={tag.tag_name}
+        selected={String(selectedTag) === String(id)}
+        onClick={() => select(String(id))}
+        depth={depth}
+      />
+    );
+  };
 
   return (
     <div className="flex flex-row items-center gap-2 mb-4" ref={ref}>
@@ -72,52 +125,11 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
           <div ref={listRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 overflow-y-auto">
             <MenuItem
               label="すべて"
-              value=""
               selected={!selectedTag}
               onClick={() => select("")}
+              depth={0}
             />
-            {rootTags.map((tag) => {
-              const children = (childrenByParent[tag.id] || []).sort((a, b) =>
-                a.tag_name.localeCompare(b.tag_name, "ja")
-              );
-
-              if (children.length > 0) {
-                return (
-                  <div key={tag.id}>
-                    <div className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide border-t border-gray-100 first:border-t-0">
-                      {tag.tag_name}
-                    </div>
-                    <MenuItem
-                      label="（全て）"
-                      value={String(tag.id)}
-                      selected={String(selectedTag) === String(tag.id)}
-                      onClick={() => select(String(tag.id))}
-                      indent
-                    />
-                    {children.map((child) => (
-                      <MenuItem
-                        key={child.id}
-                        label={child.tag_name}
-                        value={String(child.id)}
-                        selected={String(selectedTag) === String(child.id)}
-                        onClick={() => select(String(child.id))}
-                        indent
-                      />
-                    ))}
-                  </div>
-                );
-              }
-
-              return (
-                <MenuItem
-                  key={tag.id}
-                  label={tag.tag_name}
-                  value={String(tag.id)}
-                  selected={String(selectedTag) === String(tag.id)}
-                  onClick={() => select(String(tag.id))}
-                />
-              );
-            })}
+            {rootTags.map((tag) => renderNode(tag, 0, new Set()))}
           </div>
         )}
       </div>
@@ -125,13 +137,24 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   );
 }
 
-function MenuItem({ label, value, selected, onClick, indent = false }) {
+function MenuItem({ label, selected, onClick, depth = 0, asHeader = false }) {
+  const paddingLeft = 12 + depth * 16;
+  if (asHeader) {
+    return (
+      <div
+        className="pt-2 pb-0.5 text-xs font-bold text-gray-500 uppercase tracking-wide"
+        style={{ paddingLeft }}
+      >
+        {label}
+      </div>
+    );
+  }
   return (
     <button
       type="button"
-      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 transition-colors
-        ${indent ? "pl-6" : ""}
+      className={`w-full text-left py-1.5 pr-3 text-sm hover:bg-blue-50 transition-colors
         ${selected ? "bg-blue-100 text-blue-800 font-semibold" : "text-gray-800"}`}
+      style={{ paddingLeft }}
       onClick={onClick}
     >
       {label}
