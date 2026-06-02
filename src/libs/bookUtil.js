@@ -160,7 +160,7 @@ export function getDescendantTagIds(allTags, tagId) {
   const id = Number(tagId);
   const result = [id];
   for (const tag of allTags) {
-    if (Number(tag.parent_id) === id) {
+    if (tag.parent_id != null && Number(tag.parent_id) === id) {
       result.push(...getDescendantTagIds(allTags, tag.id));
     }
   }
