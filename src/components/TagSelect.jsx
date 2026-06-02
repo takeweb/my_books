@@ -8,8 +8,10 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   const tagById = new Map(tags.map((t) => [Number(t.id), t]));
 
+  // ルートタグ用のセンチネルキーは、実際のタグID(0など)と衝突しないよう文字列を使う
+  const ROOT_KEY = "__ROOT__";
   const childrenByParent = tags.reduce((acc, t) => {
-    const pid = t.parent_id == null ? 0 : Number(t.parent_id);
+    const pid = t.parent_id == null ? ROOT_KEY : String(t.parent_id);
     (acc[pid] = acc[pid] || []).push(t);
     return acc;
   }, {});
@@ -22,7 +24,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   };
   const sortChild = (a, b) => a.tag_name.localeCompare(b.tag_name, "ja");
 
-  const rootTags = (childrenByParent[0] || []).slice().sort(sortRoot);
+  const rootTags = (childrenByParent[ROOT_KEY] || []).slice().sort(sortRoot);
 
   const selectedLabel = (() => {
     if (!selectedTag) return "すべて";
@@ -36,7 +38,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
       path.unshift(cur.tag_name);
       cur = cur.parent_id ? tagById.get(Number(cur.parent_id)) : null;
     }
-    const hasChildren = (childrenByParent[Number(tag.id)] || []).length > 0;
+    const hasChildren = (childrenByParent[String(tag.id)] || []).length > 0;
     const label = path.join(" › ");
     return hasChildren ? `${label}（全て）` : label;
   })();
@@ -67,14 +69,14 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     const nextVisited = new Set(visited);
     nextVisited.add(id);
 
-    const children = (childrenByParent[id] || []).slice().sort(sortChild);
+    const children = (childrenByParent[String(id)] || []).slice().sort(sortChild);
     const hasChildren = children.length > 0;
 
     if (hasChildren) {
       return (
-        <div key={id}>
+        <>
           {depth === 0 ? (
-            <div className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide border-t border-gray-100 first:border-t-0">
+            <div className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-600 uppercase tracking-wide bg-gray-50">
               {tag.tag_name}
             </div>
           ) : (
@@ -93,13 +95,12 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
             depth={depth + 1}
           />
           {children.map((child) => renderNode(child, depth + 1, nextVisited))}
-        </div>
+        </>
       );
     }
 
     return (
       <MenuItem
-        key={id}
         label={tag.tag_name}
         selected={String(selectedTag) === String(id)}
         onClick={() => select(String(id))}
@@ -129,7 +130,14 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
               onClick={() => select("")}
               depth={0}
             />
-            {rootTags.map((tag) => renderNode(tag, 0, new Set()))}
+            {rootTags.map((tag, i) => (
+              <div
+                key={tag.id}
+                className={i === 0 ? "" : "border-t border-gray-200 mt-1 pt-1"}
+              >
+                {renderNode(tag, 0, new Set())}
+              </div>
+            ))}
           </div>
         )}
       </div>
