@@ -4,7 +4,6 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const listRef = useRef(null);
-  const scrollPos = useRef(0);
 
   const tagById = new Map(tags.map((t) => [Number(t.id), t]));
 
@@ -27,9 +26,9 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const rootTags = (childrenByParent[ROOT_KEY] || []).slice().sort(sortRoot);
 
   const selectedLabel = (() => {
-    if (!selectedTag) return "すべて";
+    if (!selectedTag) return "全て";
     const tag = tagById.get(Number(selectedTag));
-    if (!tag) return "すべて";
+    if (!tag) return "全て";
     const path = [];
     const visited = new Set();
     let cur = tag;
@@ -46,16 +45,22 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const select = (value) => {
     setSelectedTag(value);
     setCurrentPage(1);
-    if (listRef.current) scrollPos.current = listRef.current.scrollTop;
     setOpen(false);
   };
 
   useEffect(() => {
     if (!open) return;
-    if (listRef.current) listRef.current.scrollTop = scrollPos.current;
+    // 開いた時、選択中の項目があればそこへスクロール。なければ先頭表示。
+    if (listRef.current) {
+      const selectedEl = listRef.current.querySelector('[data-selected="true"]');
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: "center" });
+      } else {
+        listRef.current.scrollTop = 0;
+      }
+    }
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
-        if (listRef.current) scrollPos.current = listRef.current.scrollTop;
         setOpen(false);
       }
     };
@@ -125,7 +130,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
         {open && (
           <div ref={listRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 overflow-y-auto">
             <MenuItem
-              label="すべて"
+              label="全て"
               selected={!selectedTag}
               onClick={() => select("")}
               depth={0}
@@ -160,6 +165,7 @@ function MenuItem({ label, selected, onClick, depth = 0, asHeader = false }) {
   return (
     <button
       type="button"
+      data-selected={selected ? "true" : undefined}
       className={`w-full text-left py-1.5 pr-3 text-sm hover:bg-blue-50 transition-colors
         ${selected ? "bg-blue-100 text-blue-800 font-semibold" : "text-gray-800"}`}
       style={{ paddingLeft }}

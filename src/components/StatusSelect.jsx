@@ -16,7 +16,7 @@ function StatusSelect({ statuses, selectedStatus, setSelectedStatus, setCurrentP
           setCurrentPage(1);
         }}
       >
-        <option value="">すべて</option>
+        <option value="">全て</option>
         {statuses.map((status) => (
           <option key={status.id} value={status.id}>
             {status.status_name}
