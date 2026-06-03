@@ -6,6 +6,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const initialized = useRef(false);
   const ref = useRef(null);
   const listRef = useRef(null);
+  const scrollPos = useRef(0);
 
   const tagById = new Map(tags.map((t) => [Number(t.id), t]));
 
@@ -58,12 +59,14 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   })();
 
   const select = (value) => {
+    if (listRef.current) scrollPos.current = listRef.current.scrollTop;
     setSelectedTag(value);
     setCurrentPage(1);
     setOpen(false);
   };
 
   const toggleCollapse = (id) => {
+    if (listRef.current) scrollPos.current = listRef.current.scrollTop;
     setCollapsed((prev) => {
       const next = new Set(prev);
       const key = Number(id);
@@ -92,17 +95,11 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   useEffect(() => {
     if (!open) return;
-    // 開いた時、選択中の項目があればそこへスクロール。なければ先頭表示。
-    if (listRef.current) {
-      const selectedEl = listRef.current.querySelector('[data-selected="true"]');
-      if (selectedEl) {
-        selectedEl.scrollIntoView({ block: "center" });
-      } else {
-        listRef.current.scrollTop = 0;
-      }
-    }
+    // 前回のスクロール位置を復元
+    if (listRef.current) listRef.current.scrollTop = scrollPos.current;
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
+        if (listRef.current) scrollPos.current = listRef.current.scrollTop;
         setOpen(false);
       }
     };
