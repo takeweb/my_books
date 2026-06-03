@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../libs/supabaseClient";
 import { getBookCoverUrl, getStatusSelectData } from "../libs/bookUtil";
 
@@ -12,6 +12,9 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
   const [selectedTags, setSelectedTags] = useState([]); // 選択されたタグ
   const [statuses, setStatuses] = useState([]); // ステータス一覧
   const [selectedStatus, setSelectedStatus] = useState(""); // 選択されたステータス
+  const [collapsedTagIds, setCollapsedTagIds] = useState(() => new Set());
+  const collapseInitialized = useRef(false);
+  const expandSelectedDone = useRef(false);
 
   useEffect(() => {
     getStatusSelectData(supabase).then((data) => setStatuses(data || []));
@@ -301,24 +304,22 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
             </div>
           </div>
 
-          {/* タグ選択UIを追加 */}
+          {/* タグ選択UI（ツリー＋チェックボックス） */}
           <div className="mt-4">
             <p className="text-sm font-medium text-gray-700">タグ:</p>
             <div
-              className="flex flex-wrap gap-2 mt-2 overflow-y-auto"
-              style={{ maxHeight: "28vh", paddingBottom: "4rem" }}
+              className="mt-2 overflow-y-auto border border-gray-200 rounded"
+              style={{ maxHeight: "32vh" }}
             >
-              {tags.map((tag) => (
-                <label key={tag.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedTags.includes(tag.id)}
-                    onChange={() => handleTagToggle(tag.id)}
-                    className="mr-2"
-                  />
-                  {tag.tag_name}
-                </label>
-              ))}
+              <TagTreeCheckList
+                tags={tags}
+                selectedTags={selectedTags}
+                onToggleTag={handleTagToggle}
+                collapsed={collapsedTagIds}
+                setCollapsed={setCollapsedTagIds}
+                collapseInitialized={collapseInitialized}
+                expandSelectedDone={expandSelectedDone}
+              />
             </div>
           </div>
         </div>
@@ -342,5 +343,141 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
     </div>
   );
 };
+
+function TagTreeCheckList({
+  tags,
+  selectedTags,
+  onToggleTag,
+  collapsed,
+  setCollapsed,
+  collapseInitialized,
+  expandSelectedDone,
+}) {
+  const ROOT_KEY = "__ROOT__";
+  const tagById = new Map(tags.map((t) => [Number(t.id), t]));
+  const childrenByParent = tags.reduce((acc, t) => {
+    const pid = t.parent_id == null ? ROOT_KEY : String(t.parent_id);
+    (acc[pid] = acc[pid] || []).push(t);
+    return acc;
+  }, {});
+
+  // 初回 tags 受領時に、子を持つタグを全て畳んだ状態で初期化
+  useEffect(() => {
+    if (collapseInitialized.current || tags.length === 0) return;
+    const allParents = new Set();
+    for (const t of tags) {
+      if (t.parent_id != null) allParents.add(Number(t.parent_id));
+    }
+    setCollapsed(allParents);
+    collapseInitialized.current = true;
+  }, [tags, setCollapsed, collapseInitialized]);
+
+  // 既にチェックの入っているタグの祖先を初回だけ展開
+  useEffect(() => {
+    if (
+      expandSelectedDone.current ||
+      !collapseInitialized.current ||
+      tags.length === 0 ||
+      selectedTags.length === 0
+    ) {
+      return;
+    }
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      for (const sid of selectedTags) {
+        let cur = tagById.get(Number(sid));
+        const seen = new Set();
+        while (cur && cur.parent_id && !seen.has(Number(cur.parent_id))) {
+          seen.add(Number(cur.parent_id));
+          next.delete(Number(cur.parent_id));
+          cur = tagById.get(Number(cur.parent_id));
+        }
+      }
+      return next;
+    });
+    expandSelectedDone.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags, selectedTags]);
+
+  const sortRoot = (a, b) => {
+    const ga = Number(a.genre_id) || 0;
+    const gb = Number(b.genre_id) || 0;
+    if (ga !== gb) return ga - gb;
+    return a.tag_name.localeCompare(b.tag_name, "ja");
+  };
+  const sortChild = (a, b) => a.tag_name.localeCompare(b.tag_name, "ja");
+
+  const rootTags = (childrenByParent[ROOT_KEY] || []).slice().sort(sortRoot);
+
+  const toggleCollapse = (id) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      const key = Number(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderNode = (tag, depth, visited) => {
+    const id = Number(tag.id);
+    if (visited.has(id)) return null;
+    const nextVisited = new Set(visited);
+    nextVisited.add(id);
+
+    const children = (childrenByParent[String(id)] || []).slice().sort(sortChild);
+    const hasChildren = children.length > 0;
+    const isCollapsed = collapsed.has(id);
+    const paddingLeft = 8 + depth * 16;
+    const checked = selectedTags.includes(tag.id);
+
+    return (
+      <div key={id}>
+        <div
+          className="flex items-center py-1 hover:bg-blue-50"
+          style={{ paddingLeft }}
+        >
+          {hasChildren ? (
+            <button
+              type="button"
+              onClick={() => toggleCollapse(id)}
+              className="text-gray-500 text-xs w-4 mr-1 flex-shrink-0"
+              aria-label={isCollapsed ? "展開" : "畳む"}
+            >
+              {isCollapsed ? "▶" : "▼"}
+            </button>
+          ) : (
+            <span className="w-4 mr-1 flex-shrink-0" />
+          )}
+          <label className="flex items-center cursor-pointer text-sm flex-1 min-w-0">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => onToggleTag(tag.id)}
+              className="mr-2 flex-shrink-0"
+            />
+            <span className="truncate">{tag.tag_name}</span>
+          </label>
+        </div>
+        {hasChildren && !isCollapsed && (
+          <div>{children.map((child) => renderNode(child, depth + 1, nextVisited))}</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {rootTags.map((tag, i) => (
+        <div
+          key={tag.id}
+          className={i === 0 ? "" : "border-t border-gray-200"}
+        >
+          {renderNode(tag, 0, new Set())}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default BookDetailModal;
