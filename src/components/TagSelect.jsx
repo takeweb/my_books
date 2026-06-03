@@ -95,8 +95,15 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   useEffect(() => {
     if (!open) return;
-    // 前回のスクロール位置を復元
-    if (listRef.current) listRef.current.scrollTop = scrollPos.current;
+    // 選択中タグがあればその位置までスクロール。なければ前回スクロール位置を復元。
+    if (listRef.current) {
+      const selectedEl = listRef.current.querySelector('[data-selected="true"]');
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: "center" });
+      } else {
+        listRef.current.scrollTop = scrollPos.current;
+      }
+    }
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
         if (listRef.current) scrollPos.current = listRef.current.scrollTop;
