@@ -32,6 +32,7 @@ function App() {
   const [books, setBooks] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null);
 
   // ページ変更時に上部へスクロール
@@ -85,7 +86,7 @@ function App() {
       supabase,
       currentPage,
       5,
-      (count) => setTotalPages(Math.max(1, Math.ceil(count / 5))),
+      (count) => { setTotalPages(Math.max(1, Math.ceil(count / 5))); setTotalCount(count); },
       selectedTag === "" ? null : selectedTag,
       selectedStatus === "" ? null : selectedStatus,
       tags
@@ -222,6 +223,7 @@ function App() {
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
+                    totalCount={totalCount}
                     setCurrentPage={handleSetCurrentPage}
                   />
                 }
@@ -239,7 +241,7 @@ function App() {
                     supabase,
                     currentPage,
                     5,
-                    (count) => setTotalPages(Math.max(1, Math.ceil(count / 5))),
+                    (count) => { setTotalPages(Math.max(1, Math.ceil(count / 5))); setTotalCount(count); },
                     selectedTag === "" ? null : selectedTag,
                     selectedStatus === "" ? null : selectedStatus,
                     tags
