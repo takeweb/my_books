@@ -7,6 +7,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const ref = useRef(null);
   const listRef = useRef(null);
   const scrollPos = useRef(0);
+  const wantScroll = useRef(false);
 
   const tagById = new Map(tags.map((t) => [Number(t.id), t]));
 
@@ -67,6 +68,8 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   const toggleCollapse = (id) => {
     if (listRef.current) scrollPos.current = listRef.current.scrollTop;
+    // ユーザー操作が入ったので、以降は選択タグへの自動スクロールをやめる
+    wantScroll.current = false;
     setCollapsed((prev) => {
       const next = new Set(prev);
       const key = Number(id);
@@ -76,27 +79,35 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     });
   };
 
-  // 開いた時、選択中タグの祖先チェーンを展開しておく（畳まれていても見えるように）
+  // 開いた時、選択中タグ自身と祖先チェーンを展開しておく（畳まれていても見えるように）
   useEffect(() => {
     if (!open || !selectedTag) return;
     setCollapsed((prev) => {
       const next = new Set(prev);
       let cur = tagById.get(Number(selectedTag));
       const seen = new Set();
-      while (cur && cur.parent_id && !seen.has(Number(cur.parent_id))) {
-        seen.add(Number(cur.parent_id));
-        next.delete(Number(cur.parent_id));
-        cur = tagById.get(Number(cur.parent_id));
+      while (cur && !seen.has(Number(cur.id))) {
+        seen.add(Number(cur.id));
+        // 選択タグ自身も含めて collapsed から外す
+        // （選択タグが「親タグの(全て)」のケースを救う）
+        next.delete(Number(cur.id));
+        cur = cur.parent_id ? tagById.get(Number(cur.parent_id)) : null;
       }
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // 開いた瞬間は「選択タグ位置に寄せたい」フラグを立てる
+  useEffect(() => {
+    wantScroll.current = open;
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
-    // 選択中タグがあればその位置までスクロール。なければ前回スクロール位置を復元。
-    if (listRef.current) {
+    // フラグが立っている時だけ、選択タグ位置へスクロール（または前回位置を復元）。
+    // toggleCollapse でフラグが下りた後は、collapsed が変わってもスクロールしない。
+    if (wantScroll.current && listRef.current) {
       const selectedEl = listRef.current.querySelector('[data-selected="true"]');
       if (selectedEl) {
         selectedEl.scrollIntoView({ block: "center" });
