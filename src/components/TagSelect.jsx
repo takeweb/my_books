@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 
 function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const initialized = useRef(false);
   const ref = useRef(null);
   const listRef = useRef(null);
 
@@ -25,6 +27,19 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
   const rootTags = (childrenByParent[ROOT_KEY] || []).slice().sort(sortRoot);
 
+  // 初回 tags を受け取ったら、子を持つタグを全て畳んだ状態で初期化
+  useEffect(() => {
+    if (initialized.current || tags.length === 0) return;
+    const allParents = new Set();
+    for (const t of tags) {
+      const key = t.parent_id == null ? ROOT_KEY : String(t.parent_id);
+      // この t.parent_id が指す親に子が存在する＝親IDを畳み対象に
+      if (key !== ROOT_KEY) allParents.add(Number(t.parent_id));
+    }
+    setCollapsed(allParents);
+    initialized.current = true;
+  }, [tags]);
+
   const selectedLabel = (() => {
     if (!selectedTag) return "全て";
     const tag = tagById.get(Number(selectedTag));
@@ -39,7 +54,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     }
     const hasChildren = (childrenByParent[String(tag.id)] || []).length > 0;
     const label = path.join(" › ");
-    return hasChildren ? `${label}（全て）` : label;
+    return hasChildren ? `${label}(全て)` : label;
   })();
 
   const select = (value) => {
@@ -47,6 +62,33 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     setCurrentPage(1);
     setOpen(false);
   };
+
+  const toggleCollapse = (id) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      const key = Number(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // 開いた時、選択中タグの祖先チェーンを展開しておく（畳まれていても見えるように）
+  useEffect(() => {
+    if (!open || !selectedTag) return;
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      let cur = tagById.get(Number(selectedTag));
+      const seen = new Set();
+      while (cur && cur.parent_id && !seen.has(Number(cur.parent_id))) {
+        seen.add(Number(cur.parent_id));
+        next.delete(Number(cur.parent_id));
+        cur = tagById.get(Number(cur.parent_id));
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,7 +108,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [open, collapsed]);
 
   const renderNode = (tag, depth, visited) => {
     const id = Number(tag.id);
@@ -76,30 +118,47 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
 
     const children = (childrenByParent[String(id)] || []).slice().sort(sortChild);
     const hasChildren = children.length > 0;
+    const isCollapsed = collapsed.has(id);
 
     if (hasChildren) {
+      const indicator = isCollapsed ? "▶" : "▼";
       return (
         <>
           {depth === 0 ? (
-            <div className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-600 uppercase tracking-wide bg-gray-50">
-              {tag.tag_name}
-            </div>
+            <button
+              type="button"
+              onClick={() => toggleCollapse(id)}
+              className="w-full text-left px-3 pt-2 pb-0.5 text-xs font-bold text-gray-600 uppercase tracking-wide bg-gray-50 hover:bg-gray-100 flex items-center gap-1"
+            >
+              <span className="text-gray-500 text-[10px] w-3 inline-block">
+                {indicator}
+              </span>
+              <span>{tag.tag_name}</span>
+            </button>
           ) : (
-            <MenuItem
-              label={tag.tag_name}
-              selected={false}
-              onClick={null}
-              depth={depth}
-              asHeader
-            />
+            <button
+              type="button"
+              onClick={() => toggleCollapse(id)}
+              className="w-full text-left py-1.5 pr-3 text-xs font-bold text-gray-500 uppercase tracking-wide hover:bg-gray-50 flex items-center gap-1"
+              style={{ paddingLeft: 12 + depth * 16 }}
+            >
+              <span className="text-gray-500 text-[10px] w-3 inline-block">
+                {indicator}
+              </span>
+              <span>{tag.tag_name}</span>
+            </button>
           )}
-          <MenuItem
-            label="（全て）"
-            selected={String(selectedTag) === String(id)}
-            onClick={() => select(String(id))}
-            depth={depth + 1}
-          />
-          {children.map((child) => renderNode(child, depth + 1, nextVisited))}
+          {!isCollapsed && (
+            <>
+              <MenuItem
+                label="(全て)"
+                selected={String(selectedTag) === String(id)}
+                onClick={() => select(String(id))}
+                depth={depth + 1}
+              />
+              {children.map((child) => renderNode(child, depth + 1, nextVisited))}
+            </>
+          )}
         </>
       );
     }
@@ -150,18 +209,8 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   );
 }
 
-function MenuItem({ label, selected, onClick, depth = 0, asHeader = false }) {
+function MenuItem({ label, selected, onClick, depth = 0 }) {
   const paddingLeft = 12 + depth * 16;
-  if (asHeader) {
-    return (
-      <div
-        className="pt-2 pb-0.5 text-xs font-bold text-gray-500 uppercase tracking-wide"
-        style={{ paddingLeft }}
-      >
-        {label}
-      </div>
-    );
-  }
   return (
     <button
       type="button"
