@@ -3,7 +3,7 @@ import { supabase } from "../libs/supabaseClient";
 import { useEffect } from "react";
 
 function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpdate }) {
-  const tagIdByName = new Map(tags.map((t) => [t.tag_name, t.id]));
+  const tagById = new Map(tags.map((t) => [Number(t.id), t]));
   useEffect(() => {
     if (onUpdate) {
       onUpdate();
@@ -87,52 +87,50 @@ function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpd
               {book.read_end_date && <div>読了日: {book.read_end_date}</div>}
               <div>ステータス: {book.status_name || "-"}</div>
               {/* タグを表示 */}
-              {book.tags && (
+              {book.tag_ids && book.tag_ids.length > 0 && (
                 <div className="mt-3">
                   <div className="text-sm text-gray-600 mb-1">タグ:</div>
                   <div className="flex flex-wrap gap-1">
-                    {book.tags
-                      .split(", ")
-                      .filter((tag) => tag.trim() !== "") // 空文字を除外
-                      .map((tag, index) => {
-                        const name = tag.trim();
-                        const tagId = tagIdByName.get(name);
-                        const clickable = onTagClick && tagId != null;
-                        return (
-                          <span
-                            key={index}
-                            role={clickable ? "button" : undefined}
-                            tabIndex={clickable ? 0 : undefined}
-                            onClick={
-                              clickable
-                                ? (e) => {
+                    {book.tag_ids.map((tagId, index) => {
+                      const tag = tagById.get(Number(tagId));
+                      const name = tag ? tag.tag_name : "";
+                      if (!name) return null;
+                      const clickable = !!onTagClick;
+                      return (
+                        <span
+                          key={`${tagId}-${index}`}
+                          role={clickable ? "button" : undefined}
+                          tabIndex={clickable ? 0 : undefined}
+                          onClick={
+                            clickable
+                              ? (e) => {
+                                  e.stopPropagation();
+                                  onTagClick(tagId);
+                                }
+                              : undefined
+                          }
+                          onKeyDown={
+                            clickable
+                              ? (e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     onTagClick(tagId);
                                   }
-                                : undefined
-                            }
-                            onKeyDown={
-                              clickable
-                                ? (e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      onTagClick(tagId);
-                                    }
-                                  }
-                                : undefined
-                            }
-                            className={
-                              "inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full border border-blue-200" +
-                              (clickable
-                                ? " cursor-pointer hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                : "")
-                            }
-                          >
-                            {name}
-                          </span>
-                        );
-                      })}
+                                }
+                              : undefined
+                          }
+                          className={
+                            "inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full border border-blue-200" +
+                            (clickable
+                              ? " cursor-pointer hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              : "")
+                          }
+                        >
+                          {name}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

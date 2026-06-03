@@ -31,6 +31,7 @@ RETURNS TABLE (
     read_start_date date,
     read_end_date date,
     tags character varying,
+    tag_ids bigint[],
     label_name text,
     classification_code text,
     status_name text
@@ -53,7 +54,8 @@ BEGIN
         tags_agg AS (
             SELECT
                 bt.book_id,
-                STRING_AGG(tg.tag_name, ', ' ORDER BY tg.genre_id, tg.tag_name)::character varying AS tags
+                STRING_AGG(tg.tag_name, ', ' ORDER BY tg.genre_id, tg.tag_name)::character varying AS tags,
+                ARRAY_AGG(tg.id ORDER BY tg.genre_id, tg.tag_name) AS tag_ids
             FROM
                 book_tags bt
             JOIN tags tg ON tg.id = bt.tag_id
@@ -83,6 +85,7 @@ BEGIN
             ub.read_start_date,
             ub.read_end_date,
             COALESCE(tg.tags, '') AS tags,
+            COALESCE(tg.tag_ids, ARRAY[]::bigint[]) AS tag_ids,
             l.label_name,
             b.classification_code,
             st.status_name
