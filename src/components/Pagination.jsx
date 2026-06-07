@@ -24,7 +24,7 @@ function Pagination({ currentPage, totalPages, totalCount, setCurrentPage }) {
             <option key={i + 1} value={i + 1}>{i + 1}</option>
           ))}
         </select>
-        <span className="text-gray-800 font-semibold">of {totalPages}{totalCount > 0 && <span className="text-gray-500 font-normal text-sm ml-1">({totalCount}件)</span>}</span>
+        <span className="text-gray-800 font-semibold ml-1">/ {totalPages}{totalCount > 0 && <span className="text-gray-500 font-normal text-sm ml-1">({totalCount}件)</span>}</span>
       </div>
       <button
         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
