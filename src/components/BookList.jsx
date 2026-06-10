@@ -86,6 +86,15 @@ function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpd
               {book.read_start_date && <div>読始日: {book.read_start_date}</div>}
               {book.read_end_date && <div>読了日: {book.read_end_date}</div>}
               <div>ステータス: {book.status_name || "-"}</div>
+              <div className="flex items-center gap-1">
+                <span>評価: </span>
+                {book.rating
+                  ? [...Array(5)].map((_, i) => (
+                      <span key={i} className={i < book.rating ? "opacity-100" : "opacity-25"}>⭐️</span>
+                    ))
+                  : <span>-</span>
+                }
+              </div>
               {/* タグを表示 */}
               {book.tag_ids && book.tag_ids.length > 0 && (
                 <div className="mt-3">

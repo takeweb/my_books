@@ -12,6 +12,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
   const [selectedTags, setSelectedTags] = useState([]); // 選択されたタグ
   const [statuses, setStatuses] = useState([]); // ステータス一覧
   const [selectedStatus, setSelectedStatus] = useState(""); // 選択されたステータス
+  const [rating, setRating] = useState(null); // 星評価（1〜5、nullは未評価）
   const [collapsedTagIds, setCollapsedTagIds] = useState(() => new Set());
   const collapseInitialized = useRef(false);
   const expandSelectedDone = useRef(false);
@@ -69,7 +70,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
       if (!book.id || !book.user_id) return;
       const { data, error } = await supabase
         .from("user_books")
-        .select("purchase_date, read_start_date, read_end_date, status_id")
+        .select("purchase_date, read_start_date, read_end_date, status_id, rating")
         .eq("book_id", book.id)
         .eq("user_id", book.user_id)
         .maybeSingle();
@@ -81,6 +82,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
         setReadStartDate(data.read_start_date || "");
         setReadEndDate(data.read_end_date || "");
         setSelectedStatus(data.status_id != null ? String(data.status_id) : "");
+        setRating(data.rating ?? null);
       }
     };
     fetchUserBookDates();
@@ -130,9 +132,10 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
         return;
       }
 
-      // user_booksの日時・ステータスをまとめて更新
+      // user_booksの日時・ステータス・評価をまとめて更新
       const updateData = {
         status_id: selectedStatus !== "" ? Number(selectedStatus) : null,
+        rating: rating,
       };
       if (purchaseDate) updateData.purchase_date = purchaseDate;
       if (readStartDate) updateData.read_start_date = readStartDate;
@@ -304,6 +307,12 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
             </div>
           </div>
 
+          {/* 星評価 */}
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700"><strong>評価:</strong></span>
+            <StarRating value={rating} onChange={setRating} />
+          </div>
+
           {/* タグ選択UI（ツリー＋チェックボックス） */}
           <div className="mt-4">
             <p className="text-sm font-medium text-gray-700">タグ:</p>
@@ -343,6 +352,28 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
     </div>
   );
 };
+
+function StarRating({ value, onChange }) {
+  const [hovered, setHovered] = useState(null);
+  const display = hovered ?? value;
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(value === star ? null : star)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(null)}
+          className="text-2xl leading-none focus:outline-none"
+          aria-label={`${star}星`}
+        >
+          <span className={display >= star ? "opacity-100" : "opacity-25"}>⭐️</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function TagTreeCheckList({
   tags,
