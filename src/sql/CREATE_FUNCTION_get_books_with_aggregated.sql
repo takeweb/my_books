@@ -34,7 +34,8 @@ RETURNS TABLE (
     tag_ids bigint[],
     label_name text,
     classification_code text,
-    status_name text
+    status_name text,
+    rating smallint
 )
 LANGUAGE plpgsql
 SET search_path TO public
@@ -88,7 +89,8 @@ BEGIN
             COALESCE(tg.tag_ids, ARRAY[]::bigint[]) AS tag_ids,
             l.label_name,
             b.classification_code,
-            st.status_name
+            st.status_name,
+            ub.rating
         FROM books b
             JOIN publishers p ON p.id = b.publisher_id
             JOIN user_books ub ON ub.book_id = b.id
