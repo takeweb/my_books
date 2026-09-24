@@ -63,3 +63,14 @@
   margin-bottom: 15px;
   max-width: 100%;
 }
+/* 未入力のdate入力: Safariが当日の日付をプレースホルダー表示するため、非フォーカス時は各フィールドを透明にする */
+input[type="date"].date-empty:not(:focus),
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit,
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit-fields-wrapper,
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit-year-field,
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit-month-field,
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit-day-field,
+input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit-text {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}

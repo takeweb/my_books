@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../libs/supabaseClient";
 import { getBookCoverUrl, getStatusSelectData } from "../libs/bookUtil";
 
+// Safariは空のdate入力に当日の日付をプレースホルダー表示するため、未入力時にdate-emptyを付与する（style.css参照）
+const emptyDateClass = (value) =>
+  value ? "" : "date-empty";
+
 const BookDetailModal = ({ book, onClose, onUpdate }) => {
   if (!book) return null; // bookがnullの場合は何も表示しない
 
@@ -247,7 +251,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
                 id="purchase-date"
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className="block w-48 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2"
+                className={`block w-48 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2 ${emptyDateClass(purchaseDate)}`}
               />
             </div>
             <div className="flex items-center">
@@ -285,7 +289,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
                 id="read-start-date"
                 value={readStartDate}
                 onChange={(e) => setReadStartDate(e.target.value)}
-                className="block w-40 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2"
+                className={`block w-40 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2 ${emptyDateClass(readStartDate)}`}
               />
             </div>
 
@@ -302,7 +306,7 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
                 id="read-end-date"
                 value={readEndDate}
                 onChange={(e) => setReadEndDate(e.target.value)}
-                className="block w-40 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2"
+                className={`block w-40 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm p-2 ${emptyDateClass(readEndDate)}`}
               />
             </div>
           </div>
