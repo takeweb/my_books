@@ -45,15 +45,16 @@ function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpd
             }}
           >
             <div
-              className="book-title w-full text-lg font-semibold truncate mb-2 leading-tight"
+              className="book-title w-full text-lg font-semibold max-sm:line-clamp-2 sm:truncate mb-2 leading-tight"
               title={formatBookTitle(book)}
             >
               {formatBookTitle(book)}
             </div>
 
-            <div className="book-row grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+            {/* スマートフォンでは表紙を小さくして詳細の横に並べる */}
+            <div className="book-row grid grid-cols-[6rem_minmax(0,1fr)] sm:grid-cols-12 gap-3 sm:gap-4 items-start">
               <div className="book-cover col-span-1 sm:col-span-3 shrink-0 overflow-hidden">
-                <div className="w-full h-48 sm:w-40 sm:h-60 overflow-hidden rounded">
+                <div className="w-24 h-36 sm:w-40 sm:h-60 overflow-hidden rounded">
                   {book.book_cover_image_name ? (
                     <img
                       src={getBookCoverUrl(supabase, book.book_cover_image_name)}
@@ -65,7 +66,7 @@ function BookList({ books, tags = [], pagination, onBookClick, onTagClick, onUpd
                   )}
                 </div>
               </div>
-              <div className="book-detail col-span-1 sm:col-span-9 min-w-0">
+              <div className="book-detail col-span-1 sm:col-span-9 min-w-0 text-sm sm:text-base break-words">
               <div>著者: {book.author_names || "-"}</div>
               {book.translator_names && (
                 <div>翻訳者: {book.translator_names || "-"}</div>

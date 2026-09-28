@@ -189,12 +189,12 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
   };
 
   return (
-    <div className="flex flex-row items-center gap-2 mb-4" ref={ref}>
-      <span className="text-gray-700 font-semibold whitespace-nowrap">タグ：</span>
-      <div className="relative">
+    <div className="flex flex-row items-center gap-2" ref={ref}>
+      <span className="text-gray-700 font-semibold whitespace-nowrap w-24 sm:w-auto">タグ：</span>
+      <div className="relative flex-1 min-w-0 sm:flex-none">
         <button
           type="button"
-          className="px-4 py-2 border border-gray-300 rounded bg-white text-gray-800 shadow-sm w-72 text-left flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="px-4 py-2 border border-gray-300 rounded bg-white text-gray-800 shadow-sm w-full sm:w-72 text-left flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           onClick={() => setOpen((v) => !v)}
         >
           <span className="truncate">{selectedLabel}</span>
@@ -202,7 +202,7 @@ function TagSelect({ tags, selectedTag, setSelectedTag, setCurrentPage }) {
         </button>
 
         {open && (
-          <div ref={listRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg w-72 max-h-80 overflow-y-auto">
+          <div ref={listRef} className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg w-full sm:w-72 max-h-[60dvh] sm:max-h-80 overflow-y-auto overscroll-contain">
             <MenuItem
               label="全て"
               selected={!selectedTag}

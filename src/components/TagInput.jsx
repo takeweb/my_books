@@ -14,8 +14,9 @@ function TagInput({ tags, value, onChange }) {
   const [open, setOpen] = useState(false);
   // 候補リストで選択中の位置（-1 は未選択）
   const [active, setActive] = useState(-1);
-  // 候補リストの向きと高さ（画面からはみ出さないよう、開くたびに入力欄の位置から決める）
-  const [placement, setPlacement] = useState({ up: false, maxHeight: LIST_MAX_HEIGHT });
+  // 候補リストの位置と高さ。スクロールするモーダル内でも切れないよう fixed で表示し、
+  // 画面からはみ出さないよう入力欄の位置から決める
+  const [placement, setPlacement] = useState(null);
   const boxRef = useRef(null);
   const listRef = useRef(null);
 
@@ -44,22 +45,38 @@ function TagInput({ tags, value, onChange }) {
 
   const showList = open && (suggestions.length > 0 || isNewTag);
 
-  // 下に十分な空きがなければ上に開き、空いている分だけの高さにする
+  // 下に十分な空きがなければ上に開き、空いている分だけの高さにする。
+  // モバイルでソフトキーボードが出ているときは、見えている範囲（visualViewport）で測る
   useLayoutEffect(() => {
     if (!showList || !boxRef.current) return;
+    const vv = window.visualViewport;
     const updatePlacement = () => {
       const rect = boxRef.current.getBoundingClientRect();
-      const below = window.innerHeight - rect.bottom - LIST_MARGIN;
-      const above = rect.top - LIST_MARGIN;
+      const viewTop = vv ? vv.offsetTop : 0;
+      const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const below = viewBottom - rect.bottom - LIST_MARGIN;
+      const above = rect.top - viewTop - LIST_MARGIN;
       const up = below < 200 && above > below;
       setPlacement({
         up,
+        top: up ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
         maxHeight: Math.max(120, Math.min(LIST_MAX_HEIGHT, up ? above : below)),
       });
     };
     updatePlacement();
+    // モーダル本文のスクロールにも追従するよう、キャプチャで拾う
+    window.addEventListener("scroll", updatePlacement, true);
     window.addEventListener("resize", updatePlacement);
-    return () => window.removeEventListener("resize", updatePlacement);
+    vv?.addEventListener("resize", updatePlacement);
+    vv?.addEventListener("scroll", updatePlacement);
+    return () => {
+      window.removeEventListener("scroll", updatePlacement, true);
+      window.removeEventListener("resize", updatePlacement);
+      vv?.removeEventListener("resize", updatePlacement);
+      vv?.removeEventListener("scroll", updatePlacement);
+    };
   }, [showList, value.length]);
 
   // キーボードで選択中の候補が見えるようにスクロールする
@@ -192,19 +209,24 @@ function TagInput({ tags, value, onChange }) {
       </div>
 
       {/* onMouseDown の preventDefault で入力欄のフォーカスを保ったまま選べるようにする */}
-      {showList && (
+      {showList && placement && (
         <ul
           ref={listRef}
-          className={`absolute z-20 w-full overflow-y-auto rounded border border-gray-200 bg-white py-1 text-sm shadow-lg ${
-            placement.up ? "bottom-full mb-1" : "mt-1"
-          }`}
-          style={{ maxHeight: placement.maxHeight }}
+          className="fixed z-[60] overflow-y-auto rounded border border-gray-200 bg-white py-1 text-sm shadow-lg"
+          style={{
+            top: placement.top,
+            left: placement.left,
+            width: placement.width,
+            maxHeight: placement.maxHeight,
+            // 上に開くときは入力欄の上端に候補リストの下端を合わせる
+            transform: placement.up ? "translateY(-100%)" : undefined,
+          }}
         >
           {suggestions.map(({ tag, path }, i) => (
             <li key={tag.id}>
               <button
                 type="button"
-                className={`block w-full px-3 py-1.5 text-left hover:bg-gray-100 ${
+                className={`block w-full px-3 py-2.5 sm:py-1.5 text-left hover:bg-gray-100 ${
                   i === active ? "bg-gray-100" : ""
                 }`}
                 onMouseDown={(e) => {
@@ -220,7 +242,7 @@ function TagInput({ tags, value, onChange }) {
             <li>
               <button
                 type="button"
-                className="block w-full px-3 py-1.5 text-left text-blue-700 hover:bg-gray-100"
+                className="block w-full px-3 py-2.5 sm:py-1.5 text-left text-blue-700 hover:bg-gray-100"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   addName(typed);

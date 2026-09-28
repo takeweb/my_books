@@ -131,18 +131,20 @@ function App() {
   return (
     <>
       <div className="min-h-screen flex flex-col bg-gray-50">
-        {/* 固定タイトルバー＋タグセレクト */}
+        {/* 固定タイトルバー＋タグセレクト
+            幅の狭い画面（スマートフォン・縦向きのタブレット）では、タイトルとユーザーメニューを1段目、セレクトを2段目に折り返す。
+            高さが変わってもコンテンツが隠れないよう fixed ではなく sticky にする */}
         <div
-          className="w-full fixed top-0 left-0 z-40 bg-blue-50 border-b border-blue-200 shadow"
+          className="w-full sticky top-0 z-40 bg-blue-50 border-b border-blue-200 shadow"
           style={{ minWidth: 0, maxWidth: "100vw" }}
         >
-          <div className="flex flex-row items-center justify-center px-6 py-1 gap-6 pt-2">
-            <h1 className="text-2xl font-bold text-blue-900 tracking-tight whitespace-nowrap flex items-end mb-0">
+          <div className="flex flex-wrap items-center lg:justify-center px-3 sm:px-6 py-2 gap-x-6 gap-y-2">
+            <h1 className="order-1 text-2xl font-bold text-blue-900 tracking-tight whitespace-nowrap flex items-end mb-0">
               My Books
             </h1>
             {/* タグ・ステータスセレクト（ログイン時のみ） */}
             {user && (
-              <div className="flex items-center justify-center mt-4 gap-4">
+              <div className="order-3 lg:order-2 w-full lg:w-auto flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-4">
                 <TagSelect
                   tags={tags}
                   selectedTag={selectedTag}
@@ -158,7 +160,7 @@ function App() {
               </div>
             )}
             {user && (
-              <div className="relative flex items-end mb-0">
+              <div className="order-2 lg:order-3 ml-auto lg:ml-0 relative flex items-end mb-0">
                 <button
                   id="user-menu-btn"
                   className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -197,7 +199,7 @@ function App() {
           </div>
         </div>
         {/* メインコンテンツ（スクロール） */}
-        <div className="flex-1 flex flex-col items-center pt-24 px-2 max-w-3xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center pt-4 px-2 max-w-3xl mx-auto w-full">
           {/* 認証UI */}
           {!user && (
             <AuthForm
