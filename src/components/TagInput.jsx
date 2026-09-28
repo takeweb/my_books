@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { normalizeTag, tagPath } from "../libs/tagUtil";
 
-const MAX_SUGGESTIONS = 20;
+// 候補リストと画面端の余白、候補リストの高さの上限（px）
+const LIST_MARGIN = 8;
+const LIST_MAX_HEIGHT = 320;
 
 /**
  * タグの入力欄。既存タグを候補から選ぶか、新しいタグ名を入力して Enter / カンマ / 読点で追加する
@@ -12,6 +14,10 @@ function TagInput({ tags, value, onChange }) {
   const [open, setOpen] = useState(false);
   // 候補リストで選択中の位置（-1 は未選択）
   const [active, setActive] = useState(-1);
+  // 候補リストの向きと高さ（画面からはみ出さないよう、開くたびに入力欄の位置から決める）
+  const [placement, setPlacement] = useState({ up: false, maxHeight: LIST_MAX_HEIGHT });
+  const boxRef = useRef(null);
+  const listRef = useRef(null);
 
   const tagById = new Map(tags.map((t) => [Number(t.id), t]));
   const selectedIds = new Set(value.filter((v) => v.id != null).map((v) => Number(v.id)));
@@ -25,8 +31,7 @@ function TagInput({ tags, value, onChange }) {
       .filter((t) => !selectedIds.has(Number(t.id)))
       .map((t) => ({ tag: t, path: tagPath(tagById, t) }))
       .filter(({ path }) => !q || path.toLowerCase().includes(q))
-      .sort((a, b) => a.path.localeCompare(b.path, "ja"))
-      .slice(0, MAX_SUGGESTIONS);
+      .sort((a, b) => a.path.localeCompare(b.path, "ja"));
   })();
   const isNewTag =
     typed !== "" &&
@@ -36,6 +41,32 @@ function TagInput({ tags, value, onChange }) {
   useEffect(() => {
     setActive(-1);
   }, [query]);
+
+  const showList = open && (suggestions.length > 0 || isNewTag);
+
+  // 下に十分な空きがなければ上に開き、空いている分だけの高さにする
+  useLayoutEffect(() => {
+    if (!showList || !boxRef.current) return;
+    const updatePlacement = () => {
+      const rect = boxRef.current.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom - LIST_MARGIN;
+      const above = rect.top - LIST_MARGIN;
+      const up = below < 200 && above > below;
+      setPlacement({
+        up,
+        maxHeight: Math.max(120, Math.min(LIST_MAX_HEIGHT, up ? above : below)),
+      });
+    };
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => window.removeEventListener("resize", updatePlacement);
+  }, [showList, value.length]);
+
+  // キーボードで選択中の候補が見えるようにスクロールする
+  useEffect(() => {
+    if (active < 0 || !listRef.current) return;
+    listRef.current.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [active]);
 
   const addTag = (tag) => {
     if (!selectedIds.has(Number(tag.id))) {
@@ -122,7 +153,10 @@ function TagInput({ tags, value, onChange }) {
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-center gap-1.5 rounded border border-gray-300 bg-white px-2 py-1.5 focus-within:border-blue-500">
+      <div
+        ref={boxRef}
+        className="flex flex-wrap items-center gap-1.5 rounded border border-gray-300 bg-white px-2 py-1.5 focus-within:border-blue-500"
+      >
         {value.map((item, i) => (
           <span
             key={item.id ?? `new:${item.tag_name}`}
@@ -158,8 +192,14 @@ function TagInput({ tags, value, onChange }) {
       </div>
 
       {/* onMouseDown の preventDefault で入力欄のフォーカスを保ったまま選べるようにする */}
-      {open && (suggestions.length > 0 || isNewTag) && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded border border-gray-200 bg-white py-1 text-sm shadow-lg">
+      {showList && (
+        <ul
+          ref={listRef}
+          className={`absolute z-20 w-full overflow-y-auto rounded border border-gray-200 bg-white py-1 text-sm shadow-lg ${
+            placement.up ? "bottom-full mb-1" : "mt-1"
+          }`}
+          style={{ maxHeight: placement.maxHeight }}
+        >
           {suggestions.map(({ tag, path }, i) => (
             <li key={tag.id}>
               <button
