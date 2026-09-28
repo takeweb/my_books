@@ -236,7 +236,12 @@ function App() {
               <BookDetailModal
                 book={selectedBook}
                 onClose={() => setSelectedBook(null)}
-                onUpdate={() => {
+                onUpdate={({ tagsCreated } = {}) => {
+                  // 新しいタグを作ったときはタグ一覧を取り直す（書籍データは tags の変更で再取得される）
+                  if (tagsCreated) {
+                    getTagSelectData(supabase).then((tags) => setTags(tags || []));
+                    return;
+                  }
                   getJoinedBooksData(
                     supabase,
                     currentPage,
