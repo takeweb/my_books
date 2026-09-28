@@ -63,6 +63,20 @@
   margin-bottom: 15px;
   max-width: 100%;
 }
+/* スマートフォン: 横幅の最小値・余白を外して画面幅に収める */
+@media (max-width: 639px) {
+  .book-list {
+    padding: 12px 12px 0 12px;
+    width: 100%;
+  }
+  .book-item {
+    min-width: 0;
+    width: 100%;
+    margin: 0 0 10px 0;
+    padding: 12px;
+  }
+}
+
 /* 未入力のdate入力: Safariが当日の日付をプレースホルダー表示するため、非フォーカス時は各フィールドを透明にする */
 input[type="date"].date-empty:not(:focus),
 input[type="date"].date-empty:not(:focus)::-webkit-datetime-edit,
