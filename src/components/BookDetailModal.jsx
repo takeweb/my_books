@@ -190,10 +190,10 @@ const BookDetailModal = ({ book, onClose, onUpdate }) => {
   // console.log("BookDetailModalに渡されたbookオブジェクト:", book); // 追加: bookオブジェクトのデバッグログ
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
-        {/* 本文: 全体はスクロールしない */}
-        <div className="p-6 overflow-visible">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg md:max-w-xl max-h-[90dvh] flex flex-col">
+        {/* 本文: 画面に収まらないとき（スマートフォンなど）は本文だけスクロールする */}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain min-h-0 flex-1">
           <h2 className="text-xl font-bold mb-4 text-center md:text-left">
             {formatBookTitle(book)}
           </h2>
@@ -360,8 +360,9 @@ function StarRating({ value, onChange }) {
           key={star}
           type="button"
           onClick={() => onChange(value === star ? null : star)}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(null)}
+          // タッチ操作ではホバー表示が残るため、マウスのときだけホバーを反映する
+          onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(star)}
+          onPointerLeave={() => setHovered(null)}
           className="text-2xl leading-none focus:outline-none"
           aria-label={`${star}星`}
         >
